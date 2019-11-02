@@ -1,4 +1,12 @@
-#Dot Net Project and Configuration
+## Prerequisites
+
+- Docker Desktop
+- Visual Studio Code
+- VS Code Extension: Azure Tools and Docker
+- Azure Container Registry, an Azure subscription
+
+## Step 1: Creating .Net Core App and Publish
+
 ```
 dotnet new webapi
 dotnet build
@@ -6,53 +14,118 @@ dotnet run
 dotnet publish -c release -o /app
 ```
 
-#Docker and Configuration
+## Step 2: Creating Docker file
+
+The Dockerfile file is used by the docker build command to create a container image
+
 ```
-docker build -t dotnetdemo
-docker run -p 8181:80 dotnetdemo
+FROM microsoft/dotnet:2.2-aspnetcore-runtime
+WORKDIR /app
+COPY /app /app
+ENTRYPOINT ["dotnet", "<project-name>.dll"]
 ```
 
-#create azure resource group
+## Step 3: Docker Ignore
+
+Docker ignore will improvise docker build performance based on eliminating content defined on .dockerignore
+
 ```
-az group create --name dotnetdemo --location eastus
+bin/
+obj/
 ```
 
-#create azure container registery in azure
+## Step 4: Build Docker Container
+
+The docker build command builds Docker images from a Dockerfile and a “context”.
+
 ```
-az acr create -g dotnetdemo --name dotnetContainerDemo --sku Basic --admin-enabled true
+docker build -t <tag_name>
 ```
 
-#Getting Creadential
+## Step 5: Running the Docker Image
+
+The docker run command first creates a writeable container layer over the specified image.
+
 ```
-az acr credential show -n dotnetContainerDemo
+docker run -p <local_system_port>:<docker_port> <tag_name>
+docker run -p 8080:80 <tag_name>
+Test Application: (http://localhost:8080/api/values)
 ```
 
-# Docker Tag
+## Step 6: Create azure resource group
+
+Using Azure Cli create the Resource Group, Container registry and Webapp much more.
+
 ```
-docker tag dotnetdemo dotnetcontainerdemo.azurecr.io/dotnetdemo:v1
+az group create --name <group_name> --location <location>
+az group create --name demogroup --location eastus
 ```
 
-# Docker Login / Connect to registery
+## Step 7:  Create azure container registry
+
+Azure Container Registry allows you to store images for all types of container deployments including DC/OS, Docker Swarm, Kubernetes and Azure services such as App Service, Batch, Service Fabric and others
+
 ```
-docker login https://dotnetcontainerdemo.azurecr.io -u dotnetcontainerdemo -p zpnX7miVYJTZjPjVIHriT3h//wcVbDd1
+az acr create --name <container_name> -g <group_name>
+az acr create -g demogroup --name demoContainerRegistry --sku Basic --admin-enabled true
 ```
 
-# Docker Push / Image
+### Step 7.1: Getting the container credentials
+
 ```
-docker push dotnetcontainerdemo.azurecr.io/dotnetdemo:v1
-```
-# Create App service Plan
-```
-az appservice plan create -n dotnetdemoplan -g dotnetdemo --sku S1 --is-linux
+az acr credential show -n <container_registery_name>
+az acr credential show -n demoContainerRegistry
 ```
 
-# Create Web App
+## Step 8: Tag Docker Image with registry reference
+
 ```
-az webapp create -g dotnetdemo -p dotnetdemoplan -n dotnetdockerdemo --runtime "DOTNETCORE|2.2"
-az webapp create --resource-group myResourceGroup --plan myAppServicePlan --name <app-name> --deployment-container-image-name <azure-container-registry-name>.azurecr.io/mydockerimage:v1.0.0
+docker tag <registry_uri>/<name:version>
+docker tag demoContainerRegistry.azurecr.io/dotnetdemo:v1
 ```
 
-#Configure Container to Web app
+## Step 9: Login to Container Registry
+
+The docker push command Push an image or a repository to a registry
+
 ```
-az webapp config container set -n dotnetdockerdemo -g dotnetdemo --docker-custom-image-name dotnetcontainerdemo.azurecr.io/dotnetdemo:v1 --docker-registry-server-url https://dotnetcontainerdemo.azurecr.io --docker-registry-server-user dotnetContainerDemo --docker-registry-server-password zpnX7miVYJTZjPjVIHriT3h//wcVbDd1
+docker login https://<registry_uri> -u <username> -p <parrword>
+-u <registry-username>
+-p <registry-password>
 ```
+
+## Step 10: Publish your Docker Image to Azure Container Registry
+
+```
+docker push <docker_tag_name> (<registry_uri>/<name:version>)
+```
+
+## Step 11: Deploy Container as Webapp
+
+### Step 11.1: Creating Service Plan
+
+```
+az appservice plan create -n <plan_name> -g <group_name>
+az appservice plan create -n demoplan -g demogroup --sku S1 --is-linux
+```
+
+### Step 11.2: Creating WebApp
+
+```
+az webapp create -g <group_name> -p <plan_name> -n <app-name> --deployment-container-image-name <azure-container-registry-name>
+```
+
+### Step 11.3: Configure WebApp with Container Registry
+
+```az webapp config container set
+-n <app-name>
+-g <group>
+--docker-custom-image-name <tag_name>
+--docker-registry-server-url <container-registry-url>
+--docker-registry-server-user <username>
+--docker-registry-server-password <password>
+```
+
+### Step 11.4 Test you Application
+
+<app-name>.azurewebsites.net
