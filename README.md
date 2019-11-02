@@ -117,7 +117,8 @@ az webapp create -g <group_name> -p <plan_name> -n <app-name> --deployment-conta
 
 ### Step 11.3: Configure WebApp with Container Registry
 
-```az webapp config container set
+```
+az webapp config container set
 -n <app-name>
 -g <group>
 --docker-custom-image-name <tag_name>
